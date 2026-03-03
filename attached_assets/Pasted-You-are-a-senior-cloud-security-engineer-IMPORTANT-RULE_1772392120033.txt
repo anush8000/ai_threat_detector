@@ -1,0 +1,177 @@
+You are a senior cloud security engineer.
+
+IMPORTANT RULES:
+- Do NOT refactor the entire project.
+- Do NOT remove or rename existing working files.
+- Do NOT change existing functionality.
+- Only ADD new modules and minimal safe modifications.
+- Keep everything stable and compilable.
+- Clearly specify file paths for each new file.
+- Explain integration steps simply.
+
+Project Title:
+"AI-Powered Threat Detection System using CSPM and CWPP in Cloud Environments"
+
+Goal:
+Upgrade the existing CSPM dashboard so it clearly reflects:
+
+1) Configuration-Based Threat Detection (CSPM)
+2) Runtime Threat Detection (CWPP - simulated)
+3) AI Threat Analysis
+4) Threat Risk Overview
+
+---------------------------------------
+STEP 1 — Add Risk Scoring (CSPM Enhancement)
+---------------------------------------
+
+Create file:
+utils/riskScore.ts
+
+Implement:
+
+Risk Score = Severity Weight × Exposure Weight
+
+Severity weights:
+CRITICAL = 5
+HIGH = 4
+MEDIUM = 3
+LOW = 2
+
+Exposure weights:
+Public = 5
+Internal = 3
+Restricted = 1
+
+Export a function:
+calculateRiskScore(issue)
+
+Do NOT modify existing issue structure heavily.
+Just extend issue object safely with riskScore field.
+
+Explain how to import and display riskScore in existing dashboard.
+
+---------------------------------------
+STEP 2 — Add Threat Categorization
+---------------------------------------
+
+Create file:
+utils/threatCategory.ts
+
+Map issues into categories:
+
+If public S3 → Data Exposure
+If open Security Group → Network Exposure
+If public EC2 → Attack Surface
+Else → Misconfiguration Risk
+
+Export function:
+getThreatCategory(issue)
+
+Display threatCategory in UI beside severity.
+
+---------------------------------------
+STEP 3 — Add Drift Detection
+---------------------------------------
+
+Create file:
+utils/driftDetection.ts
+
+Function:
+compareScans(previousScan, currentScan)
+
+Return:
+{
+  added: Issue[],
+  removed: Issue[]
+}
+
+Use simple in-memory previous scan (no database).
+
+Add a new dashboard card:
+"Configuration Drift Detection"
+
+Show count of added and removed issues.
+
+Do NOT alter existing scan logic.
+Only wrap around it.
+
+---------------------------------------
+STEP 4 — Add CWPP Runtime Simulation
+---------------------------------------
+
+Create file:
+services/runtimeMonitor.ts
+
+Simulate mock runtime events:
+
+- CPU spike (>90%)
+- Suspicious ports (4444, 1337)
+- High outbound connections (>200)
+
+Create:
+calculateAnomalyScore(runtimeEvent)
+
+Return threatLevel:
+LOW / MEDIUM / HIGH
+
+Add new dashboard section:
+"Runtime Threat Detection (CWPP)"
+
+Display:
+Instance ID
+CPU Usage
+Suspicious Ports
+Anomaly Score
+Threat Level
+
+Use mock static data.
+Do NOT integrate real cloud monitoring.
+
+---------------------------------------
+STEP 5 — Add Threat Risk Overview Panel
+---------------------------------------
+
+Add a simple dashboard summary card:
+
+Show:
+- Total Issues
+- Critical Issues
+- Total Risk Score
+- Runtime Alerts
+
+Compute totals from existing issue array.
+Do NOT rewrite issue structure.
+
+---------------------------------------
+STEP 6 — Improve Naming Only
+---------------------------------------
+
+Rename dashboard headings to clearly reflect:
+
+"CSPM Configuration Threat Detection"
+"CWPP Runtime Threat Detection"
+"AI Threat Analysis"
+"Threat Risk Overview"
+
+Do NOT redesign layout.
+Only rename sections and add small cards.
+
+---------------------------------------
+STEP 7 — Stability Check
+---------------------------------------
+
+After generating code:
+1. Ensure no TypeScript errors.
+2. Ensure all imports are correct.
+3. Ensure project compiles.
+4. If any error occurs, fix it automatically.
+
+---------------------------------------
+
+Finally:
+
+Provide:
+1. List of newly created files
+2. List of modified files
+3. Short explanation of what was added
+4. Confirmation that existing features were not removed
