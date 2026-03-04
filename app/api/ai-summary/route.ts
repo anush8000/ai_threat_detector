@@ -1,48 +1,35 @@
+// app/api/ai-summary/route.ts
+// UPGRADED: RAG-grounded prompts — retrieves CIS/NIST controls before Groq call
+// BACKWARD COMPATIBLE: still handles { prompt: string } from old Dashboard code
+// KEPT EXACTLY: rate limiter, Groq model, error handling, response shape
+
 import { NextRequest, NextResponse } from 'next/server';
+import { buildRAGPrompt, retrieveControls } from '@/lib/rag/securityKnowledgeBase';
 
-// ─── In-memory rate limiter ───────────────────────────────────────────────────
-// Groq free tier: 30 RPM, 14,400 RPD for llama-3.3-70b-versatile
-// We conservatively enforce 20 RPH (requests per hour) to stay safely under limits
+// ─── Rate limiter (kept exactly from original) ────────────────────────────────
 const RATE_LIMIT = {
-  maxPerHour: 20,       // max requests allowed per hour
-  windowMs: 60 * 60 * 1000, // 1 hour window in ms
+  maxPerHour: 20,
+  windowMs: 60 * 60 * 1000,
 };
-
-interface RateLimitStore {
-  count: number;
-  windowStart: number;
-}
-
-// Single global store (resets on server restart — fine for a college project)
-const rateLimitStore: RateLimitStore = {
-  count: 0,
-  windowStart: Date.now(),
-};
+interface RateLimitStore { count: number; windowStart: number; }
+const rateLimitStore: RateLimitStore = { count: 0, windowStart: Date.now() };
 
 function checkRateLimit(): { allowed: boolean; remaining: number; resetInMs: number } {
   const now = Date.now();
   const elapsed = now - rateLimitStore.windowStart;
-
-  // Reset window if 1 hour has passed
   if (elapsed >= RATE_LIMIT.windowMs) {
     rateLimitStore.count = 0;
     rateLimitStore.windowStart = now;
   }
-
   const remaining = RATE_LIMIT.maxPerHour - rateLimitStore.count;
   const resetInMs = RATE_LIMIT.windowMs - (now - rateLimitStore.windowStart);
-
-  if (remaining <= 0) {
-    return { allowed: false, remaining: 0, resetInMs };
-  }
-
+  if (remaining <= 0) return { allowed: false, remaining: 0, resetInMs };
   rateLimitStore.count++;
   return { allowed: true, remaining: remaining - 1, resetInMs };
 }
 
-// ─── Route handler ────────────────────────────────────────────────────────────
+// ─── GET — quota status (kept exactly from original) ─────────────────────────
 export async function GET() {
-  // Expose current quota status to the frontend
   const now = Date.now();
   const elapsed = now - rateLimitStore.windowStart;
   if (elapsed >= RATE_LIMIT.windowMs) {
@@ -52,113 +39,135 @@ export async function GET() {
   const remaining = RATE_LIMIT.maxPerHour - rateLimitStore.count;
   const resetInMs = RATE_LIMIT.windowMs - (now - rateLimitStore.windowStart);
   const resetInMins = Math.ceil(resetInMs / 60000);
-
-  return NextResponse.json({
-    remaining,
-    total: RATE_LIMIT.maxPerHour,
-    resetInMins,
-  });
+  return NextResponse.json({ remaining, total: RATE_LIMIT.maxPerHour, resetInMins });
 }
 
+// ─── POST — RAG-grounded AI analysis ─────────────────────────────────────────
 export async function POST(request: NextRequest) {
-  // ── 1. Rate limit check ──
+  // Rate limit (same as original)
   const { allowed, remaining, resetInMs } = checkRateLimit();
   const resetInMins = Math.ceil(resetInMs / 60000);
 
   if (!allowed) {
     return NextResponse.json(
-      {
-        error: `Hourly limit reached (${RATE_LIMIT.maxPerHour} requests/hour). Resets in ${resetInMins} minute(s).`,
-        resetInMins,
-      },
-      {
-        status: 429,
-        headers: {
-          'X-RateLimit-Limit':     String(RATE_LIMIT.maxPerHour),
-          'X-RateLimit-Remaining': '0',
-          'X-RateLimit-Reset':     String(resetInMins),
-          'Retry-After':           String(Math.ceil(resetInMs / 1000)),
-        },
-      }
+      { error: `Hourly limit reached (${RATE_LIMIT.maxPerHour} requests/hour). Resets in ${resetInMins} minute(s).`, resetInMins },
+      { status: 429, headers: {
+        'X-RateLimit-Limit': String(RATE_LIMIT.maxPerHour),
+        'X-RateLimit-Remaining': '0',
+        'X-RateLimit-Reset': String(resetInMins),
+        'Retry-After': String(Math.ceil(resetInMs / 1000)),
+      }}
     );
   }
 
-  // ── 2. Validate request ──
-  let body: any;
+  // Parse body
+  let body: {
+    // New structured format (from upgraded Dashboard)
+    issues?: Array<{ type: string; description: string; severity: string }>;
+    riskScore?: number;
+    complianceScore?: number;
+    counts?: { critical: number; high: number; medium: number; low: number };
+    // Legacy format (from original Dashboard — keep working)
+    prompt?: string;
+  };
+
   try {
     body = await request.json();
-    if (!body) throw new Error('Missing Findings');
+    if (!body) throw new Error('Missing body');
   } catch {
-    return NextResponse.json(
-      { error: 'Invalid or missing request body ' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid or missing request body' }, { status: 400 });
   }
 
-  // ── 3. Check API key ──
   const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: 'API is not set' },
-      { status: 500 }
-    );
-  }
+  if (!apiKey) return NextResponse.json({ error: 'GROQ_API_KEY is not set' }, { status: 500 });
 
-  // ── 4. Call Groq API (OpenAI-compatible) ──
-  try {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model:       'llama-3.3-70b-versatile', // best free model on Groq
-        max_tokens:  1024,
-        temperature: 0.7,
-        messages: [
-          {
-            role:"system",
-            content: `You are a senior cloud security analyst.
+  // ── Build RAG-grounded prompt ─────────────────────────────────────────────
+  let finalPrompt: string;
+  let ragControlsForResponse: Array<{ id: string; framework: string; title: string; severity: string }> = [];
 
-Return your answer strictly in this format:
+  if (body.issues && Array.isArray(body.issues)) {
+    // ── NEW PATH: structured issues — full RAG grounding ──
+    const topIssues = body.issues.slice(0, 6).map(i => ({
+      type: i.type || 'Unknown',
+      description: i.description || '',
+      severity: i.severity || 'low',
+    }));
+
+    finalPrompt = buildRAGPrompt({
+      riskScore: body.riskScore || 0,
+      complianceScore: body.complianceScore || 100,
+      counts: body.counts || { critical: 0, high: 0, medium: 0, low: 0 },
+      topIssues,
+    });
+
+    const issueQuery = topIssues.map(i => `${i.type} ${i.severity} ${i.description}`).join(' ');
+    const { controls } = retrieveControls(issueQuery, 3);
+    ragControlsForResponse = controls.map(c => ({
+      id: c.id, framework: c.framework, title: c.title, severity: c.severity,
+    }));
+
+  } else if (body.prompt) {
+    // ── LEGACY PATH: old { prompt } string — augment with RAG context ──
+    // Original Dashboard still works, but now AI has CIS controls as context
+    const { contextBlock, controls } = retrieveControls(body.prompt, 3);
+    finalPrompt = `You are a senior cloud security analyst.
+
+Use these CIS/NIST controls as your authoritative reference:
+
+=== RETRIEVED SECURITY CONTROLS ===
+${contextBlock}
+
+=== FINDINGS TO ANALYZE ===
+${body.prompt}
+
+Return STRICTLY in this format:
 
 SUMMARY:
-<short executive summary>
+<cite specific CIS control IDs>
 
 RISK_LEVEL:
 <LOW | MEDIUM | HIGH | CRITICAL>
 
 ATTACK_VECTORS:
 - item
-- item
 
 REMEDIATION:
-- step
-- step
+- step with AWS CLI command`;
 
-Analyze these findings:`
-          },
+    ragControlsForResponse = controls.map(c => ({
+      id: c.id, framework: c.framework, title: c.title, severity: c.severity,
+    }));
+
+  } else {
+    return NextResponse.json({ error: 'Request must include issues array or prompt string' }, { status: 400 });
+  }
+
+  // ── Call Groq API (same model, same error handling as original) ───────────
+  try {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 1024,
+        temperature: 0.3, // lowered from 0.7 → more factual security responses
+        messages: [
           {
-            role:"user",
-            content: JSON.stringify(body),
+            role: 'system',
+            content: 'You are a senior AWS cloud security engineer specializing in CIS Benchmarks and NIST 800-53. Always cite specific control IDs. Be precise and actionable.',
           },
+          { role: 'user', content: finalPrompt },
         ],
       }),
     });
 
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      console.error('API error:', err);
-
-      // If Groq itself rate limits us, surface it clearly
       if (response.status === 429) {
-        return NextResponse.json(
-          { error: 'Please wait a moment and try again.' },
-          { status: 429 }
-        );
+        return NextResponse.json({ error: 'Please wait a moment and try again.' }, { status: 429 });
       }
-
       return NextResponse.json(
-        { error: `API Error ${response.status}`, details: err.error?.message || 'Unknown error' },
+        { error: `API Error ${response.status}`, details: (err as { error?: { message?: string } }).error?.message || 'Unknown error' },
         { status: response.status }
       );
     }
@@ -166,18 +175,17 @@ Analyze these findings:`
     const data = await response.json();
     const summary = data.choices?.[0]?.message?.content || 'Unable to generate summary';
 
+    // Response includes ragControls so Dashboard can show retrieved controls
     return NextResponse.json(
-      { summary, remaining },
-      {
-        headers: {
-          'X-RateLimit-Limit':     String(RATE_LIMIT.maxPerHour),
-          'X-RateLimit-Remaining': String(remaining),
-          'X-RateLimit-Reset':     String(resetInMins),
-        },
-      }
+      { summary, remaining, ragControls: ragControlsForResponse },
+      { headers: {
+        'X-RateLimit-Limit': String(RATE_LIMIT.maxPerHour),
+        'X-RateLimit-Remaining': String(remaining),
+        'X-RateLimit-Reset': String(resetInMins),
+      }}
     );
+
   } catch (error) {
-    console.error('AI summary error:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to generate summary' },
       { status: 500 }

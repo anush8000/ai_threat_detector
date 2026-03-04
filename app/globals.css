@@ -1,26 +1,399 @@
 @import "tailwindcss";
 
+/* ═══════════════════════════════════════════════════════════════
+   BENTO BOX AESTHETIC 
+   ═══════════════════════════════════════════════════════════════ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: dark;
+
+  /* Deep dark backgrounds */
+  --bg-primary: #000000;
+  --bg-level1: #0a0a0a;
+  --bg-level2: #141414;
+  --fill-3: #1c1c1e;
+
+  /* Separators */
+  --sep: rgba(255, 255, 255, 0.1);
+  --sep-opaque: rgba(255, 255, 255, 0.05);
+
+  /* High contrast text */
+  --label-1: #ffffff;
+  --label-2: #ebebf5;
+  --label-3: rgba(235, 235, 245, 0.6);
+  --label-4: rgba(235, 235, 245, 0.3);
+
+  /* System Colors */
+  --sys-blue: #0a84ff;
+  --sys-blue-dim: rgba(10, 132, 255, 0.1);
+
+  --sys-red: #ff453a;
+  --sys-red-dim: rgba(255, 69, 58, 0.1);
+
+  --sys-orange: #ff9f0a;
+  --sys-orange-dim: rgba(255, 159, 10, 0.1);
+
+  --sys-yellow: #ffd60a;
+  --sys-yellow-dim: rgba(255, 214, 10, 0.1);
+
+  --sys-green: #30d158;
+  --sys-green-dim: rgba(48, 209, 88, 0.1);
+
+  --sys-purple: #bf5af2;
+  --sys-purple-dim: rgba(191, 90, 242, 0.1);
+
+  --sys-indigo: #5e5ce6;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ─── Reset & Base ───────────────────────────────────────────── */
+html,
+body {
+  height: 100%;
+  width: 100%;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-primary);
+  color: var(--label-1);
+  /* Use Inter, fallback to system */
+  font-family: 'Inter', -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ─── Typography ─────────────────────────────────────────────── */
+.t-display-hero {
+  font-size: 3.5rem;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.t-display {
+  font-size: 2.5rem;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.t-headline {
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.t-title-1 {
+  font-size: 1.5rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.t-title-3 {
+  font-size: 1.1rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.t-subhead {
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.t-callout {
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+
+.t-footnote {
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.t-caption {
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.t-mono {
+  font-family: 'JetBrains Mono', 'Menlo', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Layout & Surfaces ──────────────────────────────────────── */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg-primary);
+}
+
+.header {
+  height: 64px;
+  border-bottom: 0.5px solid var(--sep);
+  background: rgba(10, 10, 10, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  padding: 0 28px;
+}
+
+.bento-hero-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.bento-main-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 12px;
+}
+
+.bento-charts-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 1024px) {
+  .bento-hero-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .bento-main-row {
+    grid-template-columns: 1fr;
+  }
+
+  .bento-charts-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .bento-hero-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Components ─────────────────────────────────────────────── */
+
+.card {
+  background: var(--bg-level1);
+  border-radius: 20px;
+  border: 0.5px solid var(--sep);
+  overflow: hidden;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+
+.sev-critical {
+  background: var(--sys-red-dim);
+  color: #ff453a !important;
+  border: 0.5px solid rgba(255, 69, 58, 0.3);
+  font-weight: 700;
+}
+
+.sev-high {
+  background: var(--sys-orange-dim);
+  color: #ff9f0a !important;
+  border: 0.5px solid rgba(255, 159, 10, 0.3);
+  font-weight: 700;
+}
+
+.sev-medium {
+  background: var(--sys-yellow-dim);
+  color: #ffd60a !important;
+  border: 0.5px solid rgba(255, 214, 10, 0.25);
+  font-weight: 700;
+}
+
+.sev-low {
+  background: var(--sys-blue-dim);
+  color: #0a84ff !important;
+  border: 0.5px solid rgba(10, 132, 255, 0.3);
+  font-weight: 700;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 10px 16px;
+  color: var(--label-1);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  color: var(--label-3);
+}
+
+.btn-filled {
+  background: var(--label-1);
+  color: var(--bg-primary);
+}
+
+.btn-filled:not(:disabled):hover {
+  opacity: 0.9;
+  transform: scale(0.98);
+}
+
+.btn-secondary {
+  background: var(--bg-level2);
+  color: var(--label-1);
+  border: 0.5px solid var(--sep);
+}
+
+.btn-secondary:not(:disabled):hover {
+  background: var(--fill-3);
+}
+
+.progress-track {
+  height: 6px;
+  background: var(--bg-level2);
+  border-radius: 99px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.issue-row {
+  padding: 18px 24px;
+  background: transparent;
+  transition: background 0.15s ease;
+  cursor: pointer;
+}
+
+.issue-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.remediation-block {
+  margin: 0 24px 20px 24px;
+  padding: 16px 20px;
+  background: rgba(48, 209, 88, 0.05);
+  border: 0.5px solid rgba(48, 209, 88, 0.2);
+  border-radius: 12px;
+}
+
+.remediation-block .t-footnote {
+  font-size: 0.9rem !important;
+  color: #fff !important;
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.live-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--sys-green);
+  box-shadow: 0 0 12px var(--sys-green);
+  animation: pulse-glow 2s infinite;
+}
+
+/* ─── Animations ─────────────────────────────────────────────── */
+
+@keyframes pulse-glow {
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-up {
+  animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ─── Recharts Overrides (Ultra Minimal) ─────────────────────── */
+.recharts-cartesian-grid line {
+  display: none !important;
+}
+
+.recharts-text {
+  fill: var(--label-4) !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 10px !important;
+}
+
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  background: var(--bg-level2) !important;
+  border: 0.5px solid var(--sep) !important;
+  border-radius: 10px !important;
+  color: var(--label-1) !important;
+  font-size: 12px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+  padding: 8px 12px !important;
 }
