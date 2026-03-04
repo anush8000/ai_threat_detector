@@ -538,7 +538,7 @@ export default function Dashboard() {
 
           <div className="card" style={{ padding: 24 }}>
             <div className="t-caption" style={{ color: 'var(--label-2)', marginBottom: 8 }}>Runtime Anomalies</div>
-            <div className="t-display-hero t-mono" style={{ color: 'var(--sys-orange)' }}>
+            <div className="t-display-hero t-mono" style={{ color: 'var(--sys-orange)' }} suppressHydrationWarning>
               {mockRuntimeEvents.filter(e => calculateAnomalyScore(e).threatLevel !== 'LOW').length}
             </div>
             <div className="t-footnote" style={{ color: 'var(--label-3)', marginTop: 8 }}>ML Behavior Detection Engine</div>
@@ -656,10 +656,10 @@ export default function Dashboard() {
                     <div key={event.instanceId} style={{ padding: '12px', background: 'var(--bg-level2)', borderRadius: 12, marginBottom: i < mockRuntimeEvents.length - 1 ? 12 : 0 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                         <span className="t-mono t-subhead">{event.instanceId}</span>
-                        <span className="t-mono t-headline" style={{ color: lvlColor }}>{score}</span>
+                        <span className="t-mono t-headline" style={{ color: lvlColor }} suppressHydrationWarning>{score}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span className="t-footnote" style={{ color: 'var(--label-2)' }}>CPU: {event.cpuUsage}%</span>
+                        <span className="t-footnote" style={{ color: 'var(--label-2)' }} suppressHydrationWarning>CPU: {event.cpuUsage}%</span>
                         <span className="t-caption" style={{ color: event.suspiciousPorts.length > 0 ? 'var(--sys-red)' : 'var(--label-3)' }}>
                           Ports: {event.suspiciousPorts.length > 0 ? event.suspiciousPorts.join(',') : 'Standard'}
                         </span>
