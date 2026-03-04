@@ -24,16 +24,16 @@ import {
 } from 'lucide-react';
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
-  CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line,
+  Tooltip, ResponsiveContainer, LineChart, Line,
 } from 'recharts';
 
-// â”€â”€ Your existing utilities (unchanged) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Your existing utilities (unchanged) ────────────────────
 import { calculateRiskScore, Issue as RiskIssue } from '../../utils/riskScore';
 import { getThreatCategory } from '../../utils/threatCategory';
 import { compareScans } from '../../utils/driftDetection';
 import { calculateAnomalyScore, mockRuntimeEvents } from '../../services/runtimeMonitor';
 
-// â”€â”€â”€ TYPES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── TYPES ──────────────────────────────────────────────────────────
 interface SecurityIssue {
   id: string;
   severity: 'critical' | 'high' | 'medium' | 'low';
@@ -60,10 +60,9 @@ interface DashboardStats {
 }
 
 interface SteampipeResponse { rows: Record<string, unknown>[]; }
-interface RAGControl { id: string; framework: string; title: string; severity: string; }
 interface TrendPoint { time: string; score: number; }
 
-// â”€â”€â”€ 20 AWS SECURITY CHECKS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── 20 AWS SECURITY CHECKS ───────────────────────────────────────────
 interface CheckDef {
   id: string;
   sql: string;
@@ -80,7 +79,7 @@ const AWS_CHECKS: CheckDef[] = [
     mapRow: (b) => ({
       id: `s3-${b.name}`, checkId: 'S3_PUBLIC', cisControl: 'CIS-2.1.5',
       severity: 'high', type: 'Public S3 Bucket', resource: String(b.name), region: String(b.region),
-      description: `Bucket "${b.name}" has Block Public Access disabled - ACLs:${b.block_public_acls ? '✅' : 'âŒ'} Policy:${b.block_public_policy ? '✅' : 'âŒ'} IgnoreACL:${b.ignore_public_acls ? '✅' : 'âŒ'} Restrict:${b.restrict_public_buckets ? '✅' : 'âŒ'}`,
+      description: `Bucket "${b.name}" has Block Public Access disabled - ACLs:${b.block_public_acls ? '✅' : '\u274C'} Policy:${b.block_public_policy ? '✅' : '\u274C'} IgnoreACL:${b.ignore_public_acls ? '✅' : '\u274C'} Restrict:${b.restrict_public_buckets ? '✅' : '\u274C'}`,
       remediationHint: `aws s3api put-public-access-block --bucket ${b.name} --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true`
     })
   },
@@ -290,7 +289,7 @@ const AWS_CHECKS: CheckDef[] = [
   },
 ];
 
-// â”€â”€â”€ MOCK DATA (shown when Steampipe unavailable) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── MOCK DATA (shown when Steampipe unavailable) ────────────────────────────
 const MOCK_ISSUES: SecurityIssue[] = [
   {
     id: 'm1', checkId: 'SG_OPEN', cisControl: 'CIS-5.3', severity: 'critical', type: 'Overly Permissive Security Group',
@@ -307,13 +306,13 @@ const MOCK_ISSUES: SecurityIssue[] = [
   {
     id: 'm3', checkId: 'S3_PUBLIC', cisControl: 'CIS-2.1.5', severity: 'high', type: 'Public S3 Bucket',
     resource: 'customer-data-backup', region: 'us-west-2',
-    description: 'Bucket "customer-data-backup" has public access - ACLs: âŒ Policy: âŒ IgnoreACL: âŒ Restrict: âŒ',
+    description: 'Bucket "customer-data-backup" has public access - ACLs: \u274C Policy: \u274C IgnoreACL: \u274C Restrict: \u274C',
     remediationHint: 'aws s3api put-public-access-block --bucket customer-data-backup --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true'
   },
   {
     id: 'm4', checkId: 'S3_PUBLIC', cisControl: 'CIS-2.1.5', severity: 'high', type: 'Public S3 Bucket',
     resource: 'app-logs-2024', region: 'eu-west-1',
-    description: 'Bucket "app-logs-2024" has public access - ACLs: âŒ Policy: ✅ IgnoreACL: âŒ Restrict: ✅',
+    description: 'Bucket "app-logs-2024" has public access - ACLs: \u274C Policy: ✅ IgnoreACL: \u274C Restrict: ✅',
     remediationHint: 'aws s3api put-public-access-block --bucket app-logs-2024 --public-access-block-configuration BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true'
   },
   {
@@ -353,17 +352,12 @@ function getComplianceScore(issues: SecurityIssue[]) {
 }
 
 // Apple-palette chart colors
-const PIE_COLORS = ['#ff453a', '#ff9f0a', '#ffd60a', '#2997ff'];
+// (removed unused PIE_COLORS here)
 
-// â”€â”€â”€ SEVERITY HELPERS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const severityConfig = (s: string) => ({
-  critical: { dot: '#ff453a', bg: 'rgba(255,69,58,0.10)', border: 'rgba(255,69,58,0.22)', text: '#ff453a', badgeClass: 'badge-critical' },
-  high: { dot: '#ff9f0a', bg: 'rgba(255,159,10,0.10)', border: 'rgba(255,159,10,0.22)', text: '#ff9f0a', badgeClass: 'badge-high' },
-  medium: { dot: '#ffd60a', bg: 'rgba(255,214,10,0.08)', border: 'rgba(255,214,10,0.18)', text: '#ffd60a', badgeClass: 'badge-medium' },
-  low: { dot: '#2997ff', bg: 'rgba(41,151,255,0.08)', border: 'rgba(41,151,255,0.18)', text: '#2997ff', badgeClass: 'badge-low' },
-}[s] ?? { dot: '#2997ff', bg: 'rgba(41,151,255,0.08)', border: 'rgba(41,151,255,0.18)', text: '#2997ff', badgeClass: 'badge-low' });
+// ─── SEVERITY HELPERS ─────────────────────────────────────────────────
 
-// â”€â”€â”€ DASHBOARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+// ─── DASHBOARD ───────────────────────────────────────────────────────
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats>({
     publicS3Buckets: 0, publicInstances: 0, openSecurityGroups: 0,
@@ -373,9 +367,8 @@ export default function Dashboard() {
   const [prevIssues, setPrevIssues] = useState<SecurityIssue[]>([]);
   const [aiSummary, setAiSummary] = useState<string>('');
   const [generatingAI, setGeneratingAI] = useState(false);
-  const [usingMock, setUsingMock] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [ragControls, setRagControls] = useState<RAGControl[]>([]);
   const [riskTrend, setRiskTrend] = useState<TrendPoint[]>([]);
   const [aiError, setAiError] = useState('');
 
@@ -401,8 +394,8 @@ export default function Dashboard() {
   }, [processIssues]);
 
   const fetchSecurityData = useCallback(async () => {
+    setLoading(true);
     try {
-      setUsingMock(false);
       const results = await Promise.allSettled(
         AWS_CHECKS.map(check =>
           fetch(`/api/steampipe?checkId=${encodeURIComponent(check.id)}`)
@@ -440,8 +433,9 @@ export default function Dashboard() {
         return [...prev.slice(-9), { time: timeLabel, score: totalRisk }];
       });
     } catch {
-      setUsingMock(true);
       setMockData();
+    } finally {
+      setLoading(false);
     }
   }, [processIssues, setMockData]);
 
@@ -471,7 +465,6 @@ export default function Dashboard() {
       if (!res.ok) throw new Error((await res.json()).error || 'API Error');
       const data = await res.json();
       setAiSummary(data.summary);
-      if (data.ragControls) setRagControls(data.ragControls);
     } catch (e) {
       setAiError(e instanceof Error ? e.message : 'Error generating AI analysis.');
     } finally {
@@ -496,26 +489,12 @@ export default function Dashboard() {
 
 
   // ─── DERIVED METRICS ──────────────────────────────────────────────────────────
-  const crit = issues.filter(i => i.severity === 'critical').length;
-  const highC = issues.filter(i => i.severity === 'high').length;
-  const medC = issues.filter(i => i.severity === 'medium').length;
-  const lowC = issues.filter(i => i.severity === 'low').length;
-
-  const SEV = {
-    critical: { cls: 'dot-critical', color: 'var(--accent-red)' },
-    high: { cls: 'dot-high', color: 'var(--accent-orange)' },
-    medium: { cls: 'dot-medium', color: 'var(--accent-yellow, #eab308)' },
-    low: { cls: 'dot-low', color: 'var(--accent-blue)' },
-  } as Record<string, { cls: string; color: string }>;
-  const sv = (s: string) => SEV[s] ?? SEV.low;
-
   const riskColor = stats.totalRiskScore > 100 ? 'var(--accent-red)' : stats.totalRiskScore > 50 ? 'var(--accent-orange)' : 'var(--accent-green)';
-  const PIE_CS = ['var(--accent-red)', 'var(--accent-orange)', 'var(--accent-yellow, #eab308)', 'var(--accent-blue)'];
 
   return (
     <div className="app-container">
       {/* ─── HEADER ─── */}
-      <header className="header">
+      <header className="header" style={{ borderBottom: 'none' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1 }}>
           <Shield size={20} color="var(--label-1)" />
           <span className="t-headline">AI Powered Cloud Threat Detection System</span>
@@ -525,8 +504,8 @@ export default function Dashboard() {
             <span className="t-subhead">System Active</span>
             <div className="live-indicator" />
           </div>
-          <button className="btn btn-secondary" onClick={fetchSecurityData}>
-            <RefreshCw size={14} style={{ marginRight: 6 }} /> Refresh
+          <button className="btn btn-secondary" onClick={fetchSecurityData} disabled={loading}>
+            <RefreshCw size={14} style={{ marginRight: 6 }} className={loading ? 'animate-spin' : ''} /> {loading ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
       </header>
@@ -570,8 +549,8 @@ export default function Dashboard() {
         <section className="bento-main-row fade-up" style={{ animationDelay: '0.1s' }}>
 
           {/* LEFT: Issue Feed */}
-          <div className="card" style={{ display: 'flex', flexDirection: 'column', minHeight: 500 }}>
-            <div style={{ padding: '20px 24px', borderBottom: '0.5px solid var(--sep)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', minHeight: 500, border: 'none' }}>
+            <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Activity size={16} color="var(--sys-blue)" />
                 <span className="t-title-3">Configuration & Vulnerabilities</span>
@@ -591,8 +570,8 @@ export default function Dashboard() {
                   const open = expandedId === issue.id;
                   const sevStyle = `sev-${issue.severity}`;
                   return (
-                    <div key={issue.id} style={{ borderBottom: '0.5px solid var(--sep)' }}>
-                      <div className="issue-row" onClick={() => setExpandedId(open ? null : issue.id)}>
+                    <div key={issue.id} style={{ marginBottom: 8 }}>
+                      <div className="issue-row" onClick={() => setExpandedId(open ? null : issue.id)} style={{ borderRadius: 12, background: open ? 'var(--fill-3)' : 'transparent' }}>
                         <div style={{ display: 'flex', gap: 16 }}>
                           <div style={{ marginTop: 4 }}>
                             <div className={`pill ${sevStyle} t-caption`} style={{ padding: '4px 8px', fontSize: 10 }}>{issue.severity}</div>
@@ -660,8 +639,8 @@ export default function Dashboard() {
             </div>
 
             {/* CWPP Workloads */}
-            <div className="card" style={{ flex: 1 }}>
-              <div style={{ padding: '20px 24px', borderBottom: '0.5px solid var(--sep)' }}>
+            <div className="card" style={{ flex: 1, border: 'none' }}>
+              <div style={{ padding: '20px 24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                   <Cpu size={16} color="var(--sys-purple)" />
                   <span className="t-title-3">Active ML Workloads</span>
@@ -693,15 +672,14 @@ export default function Dashboard() {
 
             {/* Risk Trend Line */}
             {riskTrend.length > 1 && (
-              <div className="card" style={{ padding: 24 }}>
+              <div className="card" style={{ padding: 24, border: 'none' }}>
                 <div className="t-caption" style={{ color: 'var(--label-3)', marginBottom: 16 }}>RISK EXPOSURE TREND</div>
                 <div style={{ height: 140 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={riskTrend}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--sep)" />
                       <XAxis dataKey="time" type="category" tick={{ fill: 'var(--label-3)', fontSize: 9 }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fill: 'var(--label-3)', fontSize: 9 }} axisLine={false} tickLine={false} domain={['auto', 'auto']} width={30} />
-                      <Tooltip contentStyle={{ background: 'var(--bg-level2)', border: '0.5px solid var(--sep)', borderRadius: 10, color: 'var(--label-1)', fontSize: 12 }} itemStyle={{ color: 'var(--label-1)' }} />
+                      <Tooltip contentStyle={{ background: 'var(--bg-level2)', border: 'none', borderRadius: 10, color: 'var(--label-1)', fontSize: 12 }} itemStyle={{ color: 'var(--label-1)' }} />
                       <Line type="monotone" dataKey="score" stroke="var(--sys-blue)" strokeWidth={2} dot={false} isAnimationActive={false} />
                     </LineChart>
                   </ResponsiveContainer>
@@ -715,7 +693,7 @@ export default function Dashboard() {
         {(pieData.length > 0 || catData.length > 0) && (
           <section className="bento-charts-row fade-up" style={{ animationDelay: '0.2s' }}>
             {pieData.length > 0 && (
-              <div className="card" style={{ padding: 24, height: 300 }}>
+              <div className="card" style={{ padding: 24, height: 300, border: 'none' }}>
                 <div className="t-title-3" style={{ marginBottom: 16 }}>Severity Distribution</div>
                 <div style={{ width: '100%', height: 200 }}>
                   <ResponsiveContainer>
@@ -726,7 +704,7 @@ export default function Dashboard() {
                           return <Cell key={i} fill={bg} />;
                         })}
                       </Pie>
-                      <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ background: 'var(--bg-level2)', border: '0.5px solid var(--sep)', borderRadius: 8, color: 'var(--label-1)' }} itemStyle={{ color: 'var(--label-1)' }} />
+                      <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ background: 'var(--bg-level2)', border: 'none', borderRadius: 8, color: 'var(--label-1)' }} itemStyle={{ color: 'var(--label-1)' }} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -734,15 +712,14 @@ export default function Dashboard() {
             )}
 
             {catData.length > 0 && (
-              <div className="card" style={{ padding: 24, height: 300, gridColumn: 'span 2' }}>
+              <div className="card" style={{ padding: 24, height: 300, gridColumn: 'span 2', border: 'none' }}>
                 <div className="t-title-3" style={{ marginBottom: 16 }}>Issues by Service Category</div>
                 <div style={{ width: '100%', height: 200 }}>
                   <ResponsiveContainer>
                     <BarChart data={catData.slice(0, 5)} layout="vertical" margin={{ left: -20, right: 10 }}>
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--sep)" />
                       <XAxis type="number" hide />
                       <YAxis dataKey="category" type="category" tick={{ fill: 'var(--label-2)', fontSize: 11 }} axisLine={false} tickLine={false} width={80} />
-                      <Tooltip cursor={{ fill: 'var(--bg-level2)' }} contentStyle={{ background: 'var(--bg-level2)', border: '0.5px solid var(--sep)', borderRadius: 8, color: 'var(--label-1)' }} itemStyle={{ color: 'var(--label-1)' }} />
+                      <Tooltip cursor={{ fill: 'var(--bg-level2)' }} contentStyle={{ background: 'var(--bg-level2)', border: 'none', borderRadius: 8, color: 'var(--label-1)' }} itemStyle={{ color: 'var(--label-1)' }} />
                       <Bar dataKey="count" fill="var(--sys-blue)" radius={[0, 4, 4, 0]} barSize={16}>
                         {catData.map((d, i) => <Cell key={i} fill={i % 2 === 0 ? 'var(--sys-blue)' : 'var(--sys-indigo)'} />)}
                       </Bar>
