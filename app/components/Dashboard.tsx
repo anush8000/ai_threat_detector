@@ -549,7 +549,7 @@ export default function Dashboard() {
         <section className="bento-main-row fade-up" style={{ animationDelay: '0.1s' }}>
 
           {/* LEFT: Issue Feed */}
-          <div className="card" style={{ display: 'flex', flexDirection: 'column', minHeight: 500, border: 'none' }}>
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', height: 600, border: 'none' }}>
             <div style={{ padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Activity size={16} color="var(--sys-blue)" />
@@ -603,7 +603,7 @@ export default function Dashboard() {
             </div>
           </div>
           {/* RIGHT COL: Runtime & AI */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, height: 600 }}>
 
             {/* AI Assistant Bento */}
             <div className="card" style={{ background: 'var(--sys-indigo)', color: '#fff', border: 'none' }}>
@@ -631,7 +631,7 @@ export default function Dashboard() {
                     {aiSummary}
                   </div>
                 ) : (
-                  <div className="t-footnote" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                  <div className="t-footnote custom-scrollbar" style={{ color: 'rgba(255,255,255,0.7)', maxHeight: 150, overflowY: 'auto' }}>
                     Copilot is ready to analyze active threats and context via retrieval augmented generation.
                   </div>
                 )}
@@ -647,7 +647,7 @@ export default function Dashboard() {
                 </div>
                 <div className="t-caption" style={{ color: 'var(--label-3)' }}>Real-time Behavioral Analysis</div>
               </div>
-              <div style={{ padding: 16 }}>
+              <div className="custom-scrollbar" style={{ padding: 16, overflowY: 'auto' }}>
                 {mockRuntimeEvents.map((event, i) => {
                   const { score, threatLevel } = calculateAnomalyScore(event);
                   const lvlColor = threatLevel === 'HIGH' ? 'var(--sys-red)' : threatLevel === 'MEDIUM' ? 'var(--sys-orange)' : 'var(--sys-green)';
