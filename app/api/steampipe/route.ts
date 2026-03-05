@@ -30,6 +30,14 @@ const APPROVED_QUERIES: Record<string, string> = {
   KMS_NO_ROT: `SELECT id, region FROM aws_kms_key WHERE key_manager = 'CUSTOMER' AND key_state = 'Enabled' AND rotation_enabled = false LIMIT 50`,
   VPC_NO_FLOW: `SELECT v.vpc_id, v.region, v.cidr_block FROM aws_vpc v LEFT JOIN aws_vpc_flow_log f ON v.vpc_id = f.resource_id WHERE f.flow_log_id IS NULL AND v.is_default = false LIMIT 50`,
   LAMBDA_PUBLIC: `SELECT name, region, runtime FROM aws_lambda_function WHERE policy::text LIKE '%"Principal": "*"%' OR policy::text LIKE '%"Principal":"*"%' LIMIT 50`,
+
+  // ── GCP Checks ─────────────────────────────────────────────────────────────
+  GCP_STORAGE_PUBLIC: `SELECT name, location FROM gcp_storage_bucket WHERE iam_policy::text LIKE '%allUsers%' OR iam_policy::text LIKE '%allAuthenticatedUsers%' LIMIT 50`,
+  GCP_COMPUTE_PUBLIC: `SELECT name, zone FROM gcp_compute_instance WHERE network_interfaces::text LIKE '%accessConfigs%' AND network_interfaces::text LIKE '%ONE_TO_ONE_NAT%' LIMIT 50`,
+
+  // ── Azure Checks ───────────────────────────────────────────────────────────
+  AZURE_VM_PUBLIC: `SELECT name, region FROM azure_compute_virtual_machine WHERE public_ips IS NOT NULL LIMIT 50`,
+  AZURE_BLOB_PUBLIC: `SELECT name, region FROM azure_storage_container WHERE public_access = 'Blob' OR public_access = 'Container' LIMIT 50`,
 };
 
 // ── Connection pool ────────────────────────────────────────────────────────
@@ -48,7 +56,37 @@ const pool = steampipePassword
   })
   : null; // No pool if env var not set — requests will return 503
 
+// ── In-Memory Rate Limiter ─────────────────────────────────────────────────
+// OWASP Fix: Prevents DB connection pool exhaustion (Denial of Service)
+const rateLimitStore = new Map<string, { count: number; timestamp: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const windowMs = 60 * 1000; // 1 minute window
+  const maxRequests = 30; // Max 30 requests per minute per IP
+
+  const record = rateLimitStore.get(ip);
+  if (!record || now - record.timestamp > windowMs) {
+    rateLimitStore.set(ip, { count: 1, timestamp: now });
+    return true;
+  }
+
+  if (record.count >= maxRequests) return false;
+
+  record.count++;
+  return true;
+}
+
 export async function GET(request: NextRequest) {
+  // ── Rate Limiting ─────────────────────────────────────────────────────────
+  const ip = request.headers.get("x-forwarded-for") || "unknown_ip";
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later.", rows: [], rowCount: 0 },
+      { status: 429 }
+    );
+  }
+
   if (!pool) {
     return NextResponse.json(
       { error: 'STEAMPIPE_PASSWORD environment variable is not set', rows: [], rowCount: 0 },
@@ -76,17 +114,21 @@ export async function GET(request: NextRequest) {
   }
 
   // ── Execute whitelisted query ─────────────────────────────────────────────
-  const client = await pool.connect();
+  let client;
   try {
+    client = await pool.connect();
     const result = await client.query(approvedSQL);
     return NextResponse.json({ rows: result.rows, rowCount: result.rowCount });
   } catch (error) {
-    console.error(`Steampipe error for check ${checkId}:`, error);
+    // OWASP Fix: Do not leak raw DB stack traces or query structures to client
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error(`[Internal DB Error] Steampipe error for check ${checkId}:`, errorMessage);
+
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Query failed', rows: [], rowCount: 0 },
+      { error: 'Internal Server Error: Query failed', rows: [], rowCount: 0 },
       { status: 500 }
     );
   } finally {
-    client.release(); // Always release connection back to pool
+    if (client) client.release(); // Always release connection back to pool
   }
 }

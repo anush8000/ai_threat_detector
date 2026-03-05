@@ -14,6 +14,7 @@ export interface RuntimeEvent {
   diskReadIops: number;
   diskWriteIops: number;
   failedLogins: number;
+  provider?: 'aws' | 'gcp' | 'azure';
 }
 
 // Return type kept compatible with existing Dashboard usage
@@ -49,7 +50,7 @@ function buildNode(data: number[][], idx: number[], depth: number, maxDepth: num
   const sv = min + Math.random() * (max - min);
   return {
     leaf: false, fi, sv,
-    left:  buildNode(data, idx.filter(i => data[i][fi] < sv),  depth + 1, maxDepth),
+    left: buildNode(data, idx.filter(i => data[i][fi] < sv), depth + 1, maxDepth),
     right: buildNode(data, idx.filter(i => data[i][fi] >= sv), depth + 1, maxDepth),
   };
 }
@@ -70,7 +71,7 @@ class IsolationForest {
   fit(data: number[][], nTrees = 100, maxSamples = 256) {
     const nf = data[0].length;
     this.means = Array(nf).fill(0);
-    this.stds  = Array(nf).fill(1);
+    this.stds = Array(nf).fill(1);
     // Compute mean and std for normalization
     for (let f = 0; f < nf; f++) {
       const vals = data.map(r => r[f]);
@@ -139,13 +140,13 @@ export function calculateAnomalyScore(event: RuntimeEvent): AnomalyScoreResult {
 
   // Identify which features contributed most to the anomaly
   const contributing: string[] = [];
-  if (event.cpuUsage > 85)                  contributing.push(`High CPU (${event.cpuUsage}%)`);
-  if (event.memoryUsage > 90)               contributing.push(`High Memory (${event.memoryUsage}%)`);
-  if (event.networkOut > 100)               contributing.push(`Unusual Outbound Traffic (${event.networkOut} Mbps) — possible exfiltration`);
-  if (event.suspiciousPorts.length > 0)     contributing.push(`Suspicious Ports Active: ${event.suspiciousPorts.join(', ')} — possible C2`);
-  if (event.failedLogins > 10)              contributing.push(`Brute Force Detected (${event.failedLogins} failed logins/min)`);
-  if (event.processCount > 300)             contributing.push(`Process Explosion (${event.processCount} processes)`);
-  if (event.diskReadIops > 2000)            contributing.push(`Abnormal Disk Reads (${event.diskReadIops} IOPS) — possible data staging`);
+  if (event.cpuUsage > 85) contributing.push(`High CPU (${event.cpuUsage}%)`);
+  if (event.memoryUsage > 90) contributing.push(`High Memory (${event.memoryUsage}%)`);
+  if (event.networkOut > 100) contributing.push(`Unusual Outbound Traffic (${event.networkOut} Mbps) — possible exfiltration`);
+  if (event.suspiciousPorts.length > 0) contributing.push(`Suspicious Ports Active: ${event.suspiciousPorts.join(', ')} — possible C2`);
+  if (event.failedLogins > 10) contributing.push(`Brute Force Detected (${event.failedLogins} failed logins/min)`);
+  if (event.processCount > 300) contributing.push(`Process Explosion (${event.processCount} processes)`);
+  if (event.diskReadIops > 2000) contributing.push(`Abnormal Disk Reads (${event.diskReadIops} IOPS) — possible data staging`);
   if (contributing.length === 0 && score >= 45) {
     contributing.push('Subtle behavioral deviation detected by Isolation Forest model');
   }
@@ -154,8 +155,8 @@ export function calculateAnomalyScore(event: RuntimeEvent): AnomalyScoreResult {
     score >= 70
       ? '⚠️ IMMEDIATE ACTION: Isolate instance, rotate IAM credentials, capture memory forensics, initiate incident response.'
       : score >= 45
-      ? '🔍 INVESTIGATE: Review CloudTrail for this instance, check for unauthorized processes or cron jobs, inspect outbound connections.'
-      : '✅ Normal workload behavior. Continue monitoring.';
+        ? '🔍 INVESTIGATE: Review CloudTrail for this instance, check for unauthorized processes or cron jobs, inspect outbound connections.'
+        : '✅ Normal workload behavior. Continue monitoring.';
 
   return { score, threatLevel, contributingFeatures: contributing, recommendation };
 }
@@ -163,39 +164,38 @@ export function calculateAnomalyScore(event: RuntimeEvent): AnomalyScoreResult {
 // ─── MOCK RUNTIME EVENTS (kept same shape — Dashboard reads these directly) ───
 export const mockRuntimeEvents: RuntimeEvent[] = [
   {
-    instanceId: 'i-0abcdef1234567890',
-    cpuUsage: 95,
-    memoryUsage: 88,
-    networkIn: 5,
-    networkOut: 180,      // HIGH outbound — data exfiltration pattern
-    diskReadIops: 2500,   // HIGH reads — data staging
-    diskWriteIops: 20,
-    processCount: 320,    // HIGH process count
-    suspiciousPorts: [4444, 1337],  // C2 framework ports
-    failedLogins: 48,     // Brute force in progress
+    instanceId: 'i-0abcdef1234567890', provider: 'aws',
+    cpuUsage: 95, memoryUsage: 88, networkIn: 5, networkOut: 180, diskReadIops: 2500, diskWriteIops: 20,
+    processCount: 320, suspiciousPorts: [4444, 1337], failedLogins: 48,
   },
   {
-    instanceId: 'i-0987654321fedcba0',
-    cpuUsage: 45,
-    memoryUsage: 52,
-    networkIn: 12,
-    networkOut: 8,
-    diskReadIops: 120,
-    diskWriteIops: 60,
-    processCount: 95,
-    suspiciousPorts: [],
-    failedLogins: 1,
+    instanceId: 'i-0987654321fedcba0', provider: 'aws',
+    cpuUsage: 45, memoryUsage: 52, networkIn: 12, networkOut: 8, diskReadIops: 120, diskWriteIops: 60,
+    processCount: 95, suspiciousPorts: [], failedLogins: 1,
   },
   {
-    instanceId: 'i-0fedcba9876543210',
-    cpuUsage: 12,
-    memoryUsage: 35,
-    networkIn: 2,
-    networkOut: 350,      // VERY HIGH outbound — active exfiltration
-    diskReadIops: 2500,   // Reading everything before exfil
-    diskWriteIops: 10,
-    processCount: 45,
-    suspiciousPorts: [31337],  // Elite/leet port
-    failedLogins: 0,
+    instanceId: 'i-0fedcba9876543210', provider: 'aws',
+    cpuUsage: 12, memoryUsage: 35, networkIn: 2, networkOut: 350, diskReadIops: 2500, diskWriteIops: 10,
+    processCount: 45, suspiciousPorts: [31337], failedLogins: 0,
   },
+  {
+    instanceId: 'gcp-ml-training-node', provider: 'gcp',
+    cpuUsage: 99, memoryUsage: 95, networkIn: 50, networkOut: 900, diskReadIops: 5000, diskWriteIops: 100,
+    processCount: 15, suspiciousPorts: [22], failedLogins: 150,
+  },
+  {
+    instanceId: 'gcp-web-frontend-1', provider: 'gcp',
+    cpuUsage: 30, memoryUsage: 40, networkIn: 20, networkOut: 45, diskReadIops: 300, diskWriteIops: 50,
+    processCount: 88, suspiciousPorts: [], failedLogins: 0,
+  },
+  {
+    instanceId: 'az-win-server-core', provider: 'azure',
+    cpuUsage: 85, memoryUsage: 92, networkIn: 10, networkOut: 500, diskReadIops: 1000, diskWriteIops: 500,
+    processCount: 450, suspiciousPorts: [3389, 4444], failedLogins: 25,
+  },
+  {
+    instanceId: 'az-ubuntu-worker-2', provider: 'azure',
+    cpuUsage: 15, memoryUsage: 25, networkIn: 5, networkOut: 5, diskReadIops: 50, diskWriteIops: 10,
+    processCount: 60, suspiciousPorts: [], failedLogins: 2,
+  }
 ];
