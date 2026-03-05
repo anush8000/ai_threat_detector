@@ -11,52 +11,70 @@ const RATE_LIMIT = {
   maxPerHour: 20,
   windowMs: 60 * 60 * 1000,
 };
-interface RateLimitStore { count: number; windowStart: number; }
-const rateLimitStore: RateLimitStore = { count: 0, windowStart: Date.now() };
+const rateLimitStore = new Map<string, { count: number; windowStart: number }>();
+let lastCleanup = Date.now();
 
-function checkRateLimit(): { allowed: boolean; remaining: number; resetInMs: number } {
+function checkRateLimit(ip: string): { allowed: boolean; remaining: number; resetInMs: number } {
   const now = Date.now();
-  const elapsed = now - rateLimitStore.windowStart;
-  if (elapsed >= RATE_LIMIT.windowMs) {
-    rateLimitStore.count = 0;
-    rateLimitStore.windowStart = now;
+
+  // Lazy cleanup every 10 minutes
+  if (now - lastCleanup > 10 * 60 * 1000) {
+    for (const [key, record] of rateLimitStore.entries()) {
+      if (now - record.windowStart > RATE_LIMIT.windowMs) {
+        rateLimitStore.delete(key);
+      }
+    }
+    lastCleanup = now;
   }
-  const remaining = RATE_LIMIT.maxPerHour - rateLimitStore.count;
-  const resetInMs = RATE_LIMIT.windowMs - (now - rateLimitStore.windowStart);
+
+  let record = rateLimitStore.get(ip);
+
+  if (!record || now - record.windowStart >= RATE_LIMIT.windowMs) {
+    record = { count: 0, windowStart: now };
+    rateLimitStore.set(ip, record);
+  }
+
+  const remaining = RATE_LIMIT.maxPerHour - record.count;
+  const resetInMs = RATE_LIMIT.windowMs - (now - record.windowStart);
+
   if (remaining <= 0) return { allowed: false, remaining: 0, resetInMs };
-  rateLimitStore.count++;
+
+  record.count++;
   return { allowed: true, remaining: remaining - 1, resetInMs };
 }
 
 // ─── GET — quota status (kept exactly from original) ─────────────────────────
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for') || 'unknown';
+  let record = rateLimitStore.get(ip);
   const now = Date.now();
-  const elapsed = now - rateLimitStore.windowStart;
-  if (elapsed >= RATE_LIMIT.windowMs) {
-    rateLimitStore.count = 0;
-    rateLimitStore.windowStart = now;
+  if (!record || now - record.windowStart >= RATE_LIMIT.windowMs) {
+    record = { count: 0, windowStart: now };
   }
-  const remaining = RATE_LIMIT.maxPerHour - rateLimitStore.count;
-  const resetInMs = RATE_LIMIT.windowMs - (now - rateLimitStore.windowStart);
+  const remaining = Math.max(0, RATE_LIMIT.maxPerHour - record.count);
+  const resetInMs = Math.max(0, RATE_LIMIT.windowMs - (now - record.windowStart));
   const resetInMins = Math.ceil(resetInMs / 60000);
   return NextResponse.json({ remaining, total: RATE_LIMIT.maxPerHour, resetInMins });
 }
 
 // ─── POST — RAG-grounded AI analysis ─────────────────────────────────────────
 export async function POST(request: NextRequest) {
-  // Rate limit (same as original)
-  const { allowed, remaining, resetInMs } = checkRateLimit();
+  // Rate limit
+  const ip = request.headers.get('x-forwarded-for') || 'unknown';
+  const { allowed, remaining, resetInMs } = checkRateLimit(ip);
   const resetInMins = Math.ceil(resetInMs / 60000);
 
   if (!allowed) {
     return NextResponse.json(
       { error: `Hourly limit reached (${RATE_LIMIT.maxPerHour} requests/hour). Resets in ${resetInMins} minute(s).`, resetInMins },
-      { status: 429, headers: {
-        'X-RateLimit-Limit': String(RATE_LIMIT.maxPerHour),
-        'X-RateLimit-Remaining': '0',
-        'X-RateLimit-Reset': String(resetInMins),
-        'Retry-After': String(Math.ceil(resetInMs / 1000)),
-      }}
+      {
+        status: 429, headers: {
+          'X-RateLimit-Limit': String(RATE_LIMIT.maxPerHour),
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Reset': String(resetInMins),
+          'Retry-After': String(Math.ceil(resetInMs / 1000)),
+        }
+      }
     );
   }
 
@@ -178,11 +196,13 @@ REMEDIATION:
     // Response includes ragControls so Dashboard can show retrieved controls
     return NextResponse.json(
       { summary, remaining, ragControls: ragControlsForResponse },
-      { headers: {
-        'X-RateLimit-Limit': String(RATE_LIMIT.maxPerHour),
-        'X-RateLimit-Remaining': String(remaining),
-        'X-RateLimit-Reset': String(resetInMins),
-      }}
+      {
+        headers: {
+          'X-RateLimit-Limit': String(RATE_LIMIT.maxPerHour),
+          'X-RateLimit-Remaining': String(remaining),
+          'X-RateLimit-Reset': String(resetInMins),
+        }
+      }
     );
 
   } catch (error) {

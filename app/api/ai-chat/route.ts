@@ -5,26 +5,42 @@ const RATE_LIMIT = {
     windowMs: 60 * 60 * 1000,
 };
 
-interface RateLimitStore { count: number; windowStart: number; }
-const rateLimitStore: RateLimitStore = { count: 0, windowStart: Date.now() };
+const rateLimitStore = new Map<string, { count: number; windowStart: number }>();
+let lastCleanup = Date.now();
 
-function checkRateLimit(): { allowed: boolean; remaining: number; resetInMs: number } {
+function checkRateLimit(ip: string): { allowed: boolean; remaining: number; resetInMs: number } {
     const now = Date.now();
-    const elapsed = now - rateLimitStore.windowStart;
-    if (elapsed >= RATE_LIMIT.windowMs) {
-        rateLimitStore.count = 0;
-        rateLimitStore.windowStart = now;
+
+    // Lazy cleanup every 10 minutes
+    if (now - lastCleanup > 10 * 60 * 1000) {
+        for (const [key, record] of rateLimitStore.entries()) {
+            if (now - record.windowStart > RATE_LIMIT.windowMs) {
+                rateLimitStore.delete(key);
+            }
+        }
+        lastCleanup = now;
     }
-    const remaining = RATE_LIMIT.maxPerHour - rateLimitStore.count;
-    const resetInMs = RATE_LIMIT.windowMs - (now - rateLimitStore.windowStart);
+
+    let record = rateLimitStore.get(ip);
+
+    if (!record || now - record.windowStart >= RATE_LIMIT.windowMs) {
+        record = { count: 0, windowStart: now };
+        rateLimitStore.set(ip, record);
+    }
+
+    const remaining = RATE_LIMIT.maxPerHour - record.count;
+    const resetInMs = RATE_LIMIT.windowMs - (now - record.windowStart);
+
     if (remaining <= 0) return { allowed: false, remaining: 0, resetInMs };
-    rateLimitStore.count++;
+
+    record.count++;
     return { allowed: true, remaining: remaining - 1, resetInMs };
 }
 
 export async function POST(request: NextRequest) {
     try {
-        const { allowed, resetInMs } = checkRateLimit();
+        const ip = request.headers.get('x-forwarded-for') || 'unknown';
+        const { allowed, resetInMs } = checkRateLimit(ip);
         const resetInMins = Math.ceil(resetInMs / 60000);
 
         if (!allowed) {

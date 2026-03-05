@@ -59,11 +59,22 @@ const pool = steampipePassword
 // ── In-Memory Rate Limiter ─────────────────────────────────────────────────
 // OWASP Fix: Prevents DB connection pool exhaustion (Denial of Service)
 const rateLimitStore = new Map<string, { count: number; timestamp: number }>();
+let lastCleanup = Date.now();
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now();
   const windowMs = 60 * 1000; // 1 minute window
   const maxRequests = 30; // Max 30 requests per minute per IP
+
+  // Lazy cleanup every 5 minutes
+  if (now - lastCleanup > 5 * 60 * 1000) {
+    for (const [key, record] of rateLimitStore.entries()) {
+      if (now - record.timestamp > windowMs) {
+        rateLimitStore.delete(key);
+      }
+    }
+    lastCleanup = now;
+  }
 
   const record = rateLimitStore.get(ip);
   if (!record || now - record.timestamp > windowMs) {

@@ -1,0 +1,34 @@
+﻿
+> steampipe@0.1.0 test
+> vitest run --run
+
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90mC:/projects/collegeprojectnew[39m
+
+ [31mΓ¥»[39m __tests__/Dashboard.test.tsx [2m([22m[2m20 tests[22m[2m | [22m[31m6 failed[39m[2m)[22m[33m 7225[2mms[22m[39m
+     [32mΓ£ô[39m 1. Renders the loading skeleton initially before data sets[32m 34[2mms[22m[39m
+     [33m[2mΓ£ô[22m[39m 2. Renders the default AWS view with baseline mock data on fetch failure [33m 330[2mms[22m[39m
+     [32mΓ£ô[39m 3. Multi-Cloud Toggles dynamically filter the analytics and workloads (AWS)[32m 201[2mms[22m[39m
+     [32mΓ£ô[39m 4. Multi-Cloud Toggles dynamically filter the analytics and workloads (GCP)[32m 218[2mms[22m[39m
+     [32mΓ£ô[39m 5. Multi-Cloud Toggles dynamically filter the analytics and workloads (Azure)[32m 148[2mms[22m[39m
+     [32mΓ£ô[39m 6. Handles Steampipe API fetch and seamlessly blends Live data with the UI[32m 90[2mms[22m[39m
+     [32mΓ£ô[39m 7. Displays clear state when zero issues are returned[32m 27[2mms[22m[39m
+     [32mΓ£ô[39m 8. Renders pie chart when issues are present[32m 44[2mms[22m[39m
+     [32mΓ£ô[39m 9. Renders bar chart when categories are present[32m 47[2mms[22m[39m
+     [32mΓ£ô[39m 10. Allows expanding issues to view remediation instructions[32m 77[2mms[22m[39m
+     [32mΓ£ô[39m 11. Allows collapsing expanded issues[32m 106[2mms[22m[39m
+[31m     [31m├ù[31m 12. Initiates AI summary generation and updates UI state[39m[33m 1134[2mms[22m[39m
+[31m     [31m├ù[31m 13. Shows AI error boundary within copilot box on failure[39m[33m 1153[2mms[22m[39m
+[31m     [31m├ù[31m 14. Allows sending follow-up chat message to AI after summary generation[39m[33m 1096[2mms[22m[39m
+[31m     [31m├ù[31m 15. Prevents empty AI chat submission[39m[33m 1090[2mms[22m[39m
+     [32mΓ£ô[39m 16. Validates compliance score calculations dynamically map to UI[32m 61[2mms[22m[39m
+[31m     [31m├ù[31m 17. Refresh button triggers new data fetch cycle[39m[33m 1161[2mms[22m[39m
+     [32mΓ£ô[39m 18. Header indicates live system heartbeat[32m 64[2mms[22m[39m
+[31m     [31m├ù[31m 19. ML Workload Anomaly list auto scales and isolates critical threat colors[39m[32m 75[2mms[22m[39m
+     [32mΓ£ô[39m 20. Test complete Dashboard container renders correctly nested layout[32m 65[2mms[22m[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m6 failed[39m[22m[2m | [22m[1m[32m14 passed[39m[22m[90m (20)[39m
+[2m   Start at [22m 23:21:17
+[2m   Duration [22m 9.49s[2m (transform 310ms, setup 151ms, import 1.07s, tests 7.22s, environment 831ms)[22m
+
